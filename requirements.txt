@@ -1,0 +1,4 @@
+# Pinned to the versions the submission was produced with (Python 3.11.9).
+# The pipeline (solution/possession.py) needs only numpy; the scorer also needs pandas.
+numpy==2.4.6
+pandas==3.1.1
