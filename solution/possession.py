@@ -21,8 +21,8 @@ The method, in four steps
    busy (median player speed below the match's 60th percentile). A short loss of the ball is
    never proof on its own -- that is the baseline's mistake, and the ball is missing on 41% of
    graded frames.
-   (An optional step, `--extend`, stretches each proven stoppage to the kicks either side of
-   it. It is off in the submitted configuration.)
+   Each proven stoppage is then stretched to the kicks either side of it: back to just after
+   the ball was last moving fast, forward to the first frame it moves fast again.
    Smart Tagging then sharpens the picture: a tagged set piece ends a dead stretch at its restart,
    a tagged goal is dead until the kick-off that follows, and each half is dead until its kick-off.
 
@@ -93,9 +93,10 @@ DEAD_MIN_FRAMES = 100       # 4 s; shorter stretches are not stoppages
 DEAD_MIN_ANCHOR = 25        # 1 s of positive proof inside the stretch
 DEAD_PAD_FRAMES = 75        # unseen frames kept either side of the proof (3 s)
 
-# Stoppage edges. Off in the submitted configuration: tested and rejected, see the technical
-# document. `--extend` turns it on.
-EXTEND_STOPPAGES = False
+# Stoppage edges. On in the submitted configuration; `--no-extend` turns it off. On eight matches
+# of automatic broadcast tracking (SkillCorner open data) it adds 2.0-3.5 points of dead ball and
+# improves spellF1 in seven of them.
+EXTEND_STOPPAGES = True
 EDGE_FAST_FRAMES = 3        # this many consecutive frames above RESTART_BALL_SPEED = ball played
 EXTEND_FORWARD_MAX = 20 * FPS   # look this far after a proven stoppage for the restart...
 EXTEND_BACKWARD_MAX = 8 * FPS   # ...and this far before it for the kick that ended play
@@ -758,11 +759,11 @@ if __name__ == '__main__':
     parser.add_argument("--name", default="submission", help="output file name, without .csv")
     parser.add_argument("--out", default=RESULTS_DIR, help="output folder")
     parser.add_argument("--no-cache", action="store_true", help="re-read the raw tracking")
-    parser.add_argument("--extend", action="store_true",
-                        help="extend stoppages out to the kicks either side (not submitted)")
+    parser.add_argument("--no-extend", action="store_true",
+                        help="do not extend stoppages out to the kicks either side")
     args = parser.parse_args()
-    if args.extend:
-        EXTEND_STOPPAGES = True
+    if args.no_extend:
+        EXTEND_STOPPAGES = False
 
     labels = run(use_cache=not args.no_cache)
     summarise(labels, half_video_blocks(GAME))

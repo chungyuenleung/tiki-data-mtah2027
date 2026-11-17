@@ -6,7 +6,9 @@ repository (MIT licence, see `LICENSE`) plus our solution in `solution/`.
 - `solution/possession.py` — the whole pipeline
 - `solution/tiki-data.md` — the technical document
 - `solution/validation/validate_on_metrica_sample.py` — threshold validation on two other
-  matches (Metrica Sports public sample data)
+  matches with clean tracking (Metrica Sports public sample data)
+- `solution/validation/validate_on_skillcorner.py` — validation on eight other matches with
+  automatic tracking (SkillCorner open data)
 
 ## Reproduce the submission
 

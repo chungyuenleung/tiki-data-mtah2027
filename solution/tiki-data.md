@@ -71,11 +71,32 @@ of this match.
   tested it (section 4). Tighter is much worse. The tracker reports the middle of the player, not
   his foot, both positions are noisy, and a dribbled ball runs a metre or two ahead.
 
-**Choosing the final version.** We did not want to pick versions by the public score, since the
-organisers show that picks the wrong one. So before running each new version on the match we wrote
-down a rule for accepting it. For the player-activity veto: accept if it reclassifies no more than
-a quarter of the long unseen stretches. It reclassified 17 of 115, so it went in. That is the
-version we submit: 43.3% dead ball, 259 possessions averaging 13.9 seconds.
+**First attempt at choosing a version.** We did not want to pick versions by the public score,
+since the organisers show that picks the wrong one. So before running each new version on the
+match we wrote down a rule for accepting it. For the player-activity veto: accept if it
+reclassifies no more than a quarter of the long unseen stretches. It reclassified 17 of 115, so it
+went in.
+
+**The stoppage problem, and where we got it wrong.** On the public window we found about the
+right number of stoppages, but in total they were less than half as long as the truth's. Our
+guess was that the ball stays in view at the start and end of a stoppage, so our proof only
+covers the middle. We wrote an extension that stretches each stoppage back to the last kick
+before it and forward to the first kick after it. To decide whether to use it we simulated a
+visible ball on the Metrica matches and set a threshold: adopt it if it adds 3.5 points of dead
+ball on our match. It added 2.6, so we rejected it.
+
+Then we asked a better question: can we check this against real automatic tracking, not our own
+simulation? We could not find public tracking for a Barcelona match, but SkillCorner publish
+automatic broadcast tracking for A-League matches, with labels for when the ball is in play
+(section 4). Those matches look like ours: the ball is detected on 53 to 63% of frames (59% on
+ours) and nearly half the match is dead ball. On them the extension improved the score in seven
+matches out of eight, and it added only 1.8 to 3.3 points of dead ball. Our 2.6 is in the middle
+of that range. So the threshold from our simulation was simply wrong, and we reversed the
+decision. The same matches also confirmed the guess behind it: in stoppages of 6 seconds or more
+the ball is still detected in the first three seconds 56 to 59% of the time.
+
+**What we submit.** Stoppage extension on, activity veto on: 45.9% dead ball and 235 possessions
+averaging 14.6 seconds.
 
 ## 3. The method
 
@@ -97,6 +118,11 @@ lying still. A run of such frames becomes `D` only if it lasts 4 seconds and con
 Player speed is averaged over 2 seconds either side and ranked within this match, so it does not
 matter how the tracking system scales its speeds. Each stoppage is trimmed to 3 seconds either
 side of its proof.
+
+The proof usually covers only the middle of a stoppage, so each one is then stretched to the kicks
+either side of it: back to just after the last time the ball moved faster than 4 m/s for three
+frames running (looking up to 8 seconds back), and forward to the first time it does so again
+(up to 20 seconds ahead). If no such moment is found on one side, that side is left alone.
 
 Smart Tagging then adjusts the stoppages. Each half is dead until its tagged kick-off. A tagged
 goal is dead until the kick-off that follows. A stoppage ending within 5 seconds of another tagged
@@ -120,8 +146,12 @@ abstain inside a half.
 
 ## 4. Checking the thresholds on other matches
 
-We trained nothing, and used no labels or human-made data about the competition match. To test
-our thresholds we used two other matches: Sample Game 1 and Sample Game 2 from the Metrica Sports
+We trained nothing, and used no labels or human-made data about the competition match. We tested
+our thresholds on ten other matches from two public sources.
+
+### Clean tracking: two Metrica sample matches
+
+Sample Game 1 and Sample Game 2 from the Metrica Sports
 public sample data (https://github.com/metrica-sports/sample-data), about 286,000 frames. They are
 anonymised matches with tracking and event data. Metrica produced the events; we labelled nothing
 by hand.
@@ -135,9 +165,12 @@ frames there and 27% on the competition match, which gave us some confidence the
 comparable. Scores are the competition's own metrics, averaged over the two matches and three
 levels of damage.
 
+The table below was run with the stoppage extension off, which is how we were working at the
+time.
+
 | Setting | spellF1 | macroF1 |
 |---|---|---|
-| what we submit | 0.5819 | 0.8708 |
+| reference settings | 0.5819 | 0.8708 |
 | no activity veto | 0.5765 | 0.8588 |
 | veto at the 50th / 70th percentile | 0.5636 / 0.5841 | 0.8554 / 0.8683 |
 | switch cost 6 / 18 / 25 | 0.5838 / 0.5525 / 0.5213 | 0.8693 / 0.8674 / 0.8652 |
@@ -161,8 +194,45 @@ found (86% to 100% of those over 8 seconds). Short ones are not (38% to 47% of t
 4 seconds), and when we looked at the missed ones, the ball was hardly ever near a player of the
 team that had it.
 
-These numbers come from other matches, a different tracking source and labels we derived
-ourselves. They tell us which settings are sensible. They do not predict our score.
+### Automatic tracking: eight A-League matches
+
+The Metrica matches have corrected tracking, in which the ball disappears exactly when play is
+dead. Automatic tracking does not behave like that, so we looked for some. SkillCorner's open data
+(https://github.com/SkillCorner/opendata) has broadcast tracking at 10 fps for 2024/25 A-League
+matches, with a "phases of play" file. A phase exists only while the ball is in play and names the
+team in possession, so a frame inside a phase is `H` or `A` and a frame in no phase is `D`.
+SkillCorner produced the tracking and the phases; we labelled nothing. We used eight matches,
+about 1.2 million frames once repeated onto a 25 fps grid. A ball that is extrapolated rather than
+detected is treated as unseen. There is no Smart Tagging, so the pipeline runs on tracking alone.
+
+These matches resemble ours: dead ball is 42 to 54% of the match, and the ball is detected on
+about 92% of live frames and 19% of dead ones. We developed on four and kept four back until the
+end.
+
+| Setting | spellF1, all 8 | first 4 | last 4 | better than submitted in |
+|---|---|---|---|---|
+| what we submit | 0.5393 | 0.5540 | 0.5246 | |
+| no stoppage extension | 0.5210 | 0.5411 | 0.5009 | 1 of 8 |
+| no activity veto | 0.5449 | 0.5641 | 0.5257 | 5 of 8 |
+| switch cost 6 / 18 / 25 | 0.5102 / 0.5424 / 0.5295 | | | 1 / 6 / 1 of 8 |
+| touch radius 1.0 / 1.5 / 3.0 m | 0.4839 / 0.5247 / 0.5333 | | | 0 / 0 / 2 of 8 |
+| unseen-ball proof 4 s / 8 s | 0.5419 / 0.5335 | | | 6 / 2 of 8 |
+
+The extension is the one clear result: about 0.02 better and ahead in seven matches of eight,
+including all four we had kept back. Everything else is within 0.006 of what we submit. The
+activity veto, which helped slightly on the Metrica matches, does nothing useful here: of the 28
+long unseen stretches it reclassified as live in the first four matches, 22 were really dead. We
+left it in because the difference is too small to call and it is the cautious setting, but we
+would not defend it strongly.
+
+We also looked at what is still wrong, on the first four matches. With the extension on we label
+12% of dead-ball frames as possession (15% without it). About half of that comes from stoppages we never
+find, mostly ones of 4 to 20 seconds where the ball stays in view, and about a third from the
+start of stoppages we do find. Given the true dead ball our possession decoder reaches 0.67, and
+given the true team our dead-ball detection reaches 0.82. Together they reach 0.55.
+
+All of these numbers come from other matches, other tracking systems and other people's labels.
+They tell us which settings are sensible. They do not predict our score.
 
 ## 5. Things we tried and dropped
 
@@ -170,19 +240,12 @@ ourselves. They tell us which settings are sensible. They do not predict our sco
   touch. It was meant to rescue the short possessions. Best gain +0.007, so no.
 - **Minimum weight per touch.** Making every separate touch count for at least a few frames. No
   gain at all.
-- **Stretching stoppages to the kicks either side.** On the public window we find about the right
-  number of stoppages but they are much shorter in total than the truth, and we guessed the ball
-  stays visible at the start and end of each one. Stretching each stoppage back to the last fast
-  ball movement and forward to the next gained 0.043 on sample matches where we made the ball
-  visible during stoppages, and lost 0.022 where it is hidden. It added 1.4 points of dead ball in
-  the hidden case and 5.5 in the visible one, so our rule was to adopt it only if it added 3.5 or
-  more on the competition match. It added 2.6. We dropped it, even though it had the best public
-  score of the three versions. The code is still there behind `--extend`, off by default.
 
-For the record, the public five minutes scored 0.4625 for the second version, 0.4516 for the one
-we submit and 0.4645 with the extension. On 17 possessions, one possession is worth about 0.06, so
-those three are the same number. We used the public window to check the pipeline was sane and
-never to choose a setting.
+The public five minutes scored 0.4625 for the second version, 0.4516 with the activity veto added
+and 0.4645 for the version we submit. On 17 possessions, one possession is worth about 0.06, so
+those three are the same number. We used the public window to check the pipeline was sane and to
+notice that our stoppages were too short. We did not choose a setting on it: the extension went in
+because of the eight A-League matches.
 
 ## 6. What we used and what we left out
 
@@ -200,13 +263,15 @@ tracking, because it is not synchronised to the tactical timeline.
 - Stoppages are our weakest area. A player carrying the ball to a throw-in looks like possession.
   A goalkeeper standing on the ball for more than 5 seconds looks like a set piece.
 - Quick restarts under 4 seconds are missed completely.
-- On the public window our stoppages add up to much less than the truth's, and we could not find
-  out where the missing dead time goes.
+- We still miss stoppages where the ball stays in view, such as a free kick in midfield. On the
+  A-League matches we find only about 55% of stoppages lasting 4 to 10 seconds.
 - Short possessions of a few seconds are often merged into their neighbours.
 - A wrong stoppage in the middle of a possession splits it, and the metric punishes that twice.
 - Distance is measured on the ground, so a slow ball dropping over a player's head counts as a
   touch.
-- The activity veto was tested on tracking that is cleaner than this match's.
+- The activity veto is not earning its place on automatic tracking, as section 4 says.
+- The A-League tracking is from a broadcast camera at 10 fps and ours is from a tactical camera at
+  25, so that comparison is close but not exact.
 
 With more time we would find the ball in the video for the frames where the tracker loses it, use
 the tactical phases as a second source of evidence, and test on automatic tracking from other
@@ -227,10 +292,15 @@ python evaluation/validate_submission.py evaluation/results/tiki-data.csv
 The file is written to `evaluation/results/tiki-data.csv`. It needs three files under `tactical/`:
 `BAR-ATH_tactical_atd.txt`, `BAR-ATH_tactical_atd.xml` and `BAR-ATH_tactical_smart_tagging.xml`.
 
-To rerun the checks in section 4, with the public Metrica sample data:
+To rerun the checks in section 4, with the two public data sets:
 
 ```
 git clone https://github.com/metrica-sports/sample-data
 set "METRICA_SAMPLE_DIR=<path>\sample-data\data"
 python solution/validation/validate_on_metrica_sample.py
+
+git lfs install
+git clone https://github.com/SkillCorner/opendata
+set "SKILLCORNER_DIR=<path>\opendata\data\matches"
+python solution/validation/validate_on_skillcorner.py
 ```

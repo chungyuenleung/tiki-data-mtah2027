@@ -8,7 +8,8 @@ Capital Barcelona).
 |---|---|
 | The pipeline | [`solution/possession.py`](solution/possession.py) |
 | Technical document | [`solution/tiki-data.md`](solution/tiki-data.md) |
-| Validation on other matches | [`solution/validation/validate_on_metrica_sample.py`](solution/validation/validate_on_metrica_sample.py) |
+| Validation on clean tracking (2 matches) | [`solution/validation/validate_on_metrica_sample.py`](solution/validation/validate_on_metrica_sample.py) |
+| Validation on automatic tracking (8 matches) | [`solution/validation/validate_on_skillcorner.py`](solution/validation/validate_on_skillcorner.py) |
 
 ## Reproduce the submission
 
@@ -38,4 +39,5 @@ starter code is under the MIT licence (see `LICENSE`); the match data is license
 is not redistributed here.
 
 Threshold validation uses the Metrica Sports public sample data,
-<https://github.com/metrica-sports/sample-data>.
+<https://github.com/metrica-sports/sample-data>, and the SkillCorner open data,
+<https://github.com/SkillCorner/opendata>.
