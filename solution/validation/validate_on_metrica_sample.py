@@ -250,7 +250,7 @@ if __name__ == "__main__":
     datasets = [prepare(game, n_long, 11 * game + n_long)
                 for game in (1, 2) for n_long in (0, 20, 40)]
     tests = [
-        ("submitted settings", {}),
+        ("reference settings", {}),
         ("activity veto off", {"ACTIVITY_VETO": 2.0}),
         ("activity veto 0.5", {"ACTIVITY_VETO": 0.5}),
         ("activity veto 0.7", {"ACTIVITY_VETO": 0.7}),
